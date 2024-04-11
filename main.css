@@ -8,6 +8,8 @@ body {
     background-position: center;
     background-size: cover;
     background-attachment: fixed; */
+    margin-bottom: 25vh;
+    font-size: 2.5vw;
 }
 
 section {
@@ -46,12 +48,39 @@ article h3 {
 
 .part {
     height: auto;
-    padding-left: 20px;
+    /* padding-left: 20px; */
     color: #fff;
-
+    text-align: center;
+    background-color: gray;
+    opacity: 0.8;
+    width: 55%;
+    margin-left: auto;
+    margin-right: auto;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 5px;
 }
 
 .part a {
     color: turquoise;
     text-decoration: none;
+}
+
+.poem {
+    width: 65%;
+    height: auto;
+    color: black;
+    text-align: center;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding-left: 10vw;
+    padding-right: 10vw;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    margin-top: 55px;
+    margin-left: auto;
+    margin-right: auto;
+
 }
