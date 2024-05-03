@@ -84,3 +84,21 @@ article h3 {
     margin-right: auto;
 
 }
+
+
+.diary {
+    width: 65%;
+    height: auto;
+    color: black;
+    text-align: left;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding-left: 10vw;
+    padding-right: 10vw;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    margin-top: 55px;
+    margin-left: auto;
+    margin-right: auto;
+}
