@@ -7,7 +7,7 @@ body {
     width: 100vw;
     height: 100vh; /* 使用100vh来确保背景图覆盖整个视口高度 */
     background-position: center;
-    background-size: cover;
+    
     background-repeat: no-repeat;
  }
  header {
