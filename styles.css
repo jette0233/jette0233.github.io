@@ -2,15 +2,13 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
-    
-    background-image: url(https://uimg.huixiaoer.net/86137124/d594cd60034612136719036fea21c165.jpg);
+    box-sizing: border-box;
+    background-image: url('https://uimg.huixiaoer.net/86137124/d594cd60034612136719036fea21c165.jpg');
     width: 100%;
-    height: 100%;
- 
-background-position: center;
-  background-size: cover;
-
-    
+    height: 100vh; /* 使用100vh来确保背景图覆盖整个视口高度 */
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
  }
  header {
     background-color: #4CAF50;
