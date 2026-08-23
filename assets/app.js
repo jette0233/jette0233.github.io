@@ -8,6 +8,8 @@
   }
 
   const STORAGE_KEY = "ict-fullstack-review-progress-v1";
+  const SYNC_CONFIG_KEY = "ict-fullstack-review-sync-v1";
+  const DEFAULT_API_BASE_URL = window.APP_CONFIG?.apiBaseUrl || "";
   const circumference = 2 * Math.PI * 54;
   const allTasks = plan.sections.flatMap((section) =>
     section.groups.flatMap((group) =>
@@ -23,7 +25,9 @@
     status: "all",
     query: "",
     overrides: loadOverrides(),
-    openGroups: new Set()
+    openGroups: new Set(),
+    syncConfig: loadSyncConfig(),
+    syncState: "local"
   };
 
   const elements = {
@@ -33,12 +37,24 @@
     tabs: [...document.querySelectorAll("[data-view]")],
     overviewView: document.getElementById("overview-view"),
     tasksView: document.getElementById("tasks-view"),
+    noticesView: document.getElementById("notices-view"),
     searchInput: document.getElementById("search-input"),
     priorityFilter: document.getElementById("priority-filter"),
     statusFilter: document.getElementById("status-filter"),
     exportButton: document.getElementById("export-button"),
     importButton: document.getElementById("import-button"),
     importInput: document.getElementById("import-input"),
+    syncButton: document.getElementById("sync-button"),
+    syncIcon: document.getElementById("sync-icon"),
+    syncStatus: document.getElementById("sync-status"),
+    sidebarSyncSummary: document.getElementById("sidebar-sync-summary"),
+    syncDialog: document.getElementById("sync-dialog"),
+    syncForm: document.getElementById("sync-form"),
+    apiUrlInput: document.getElementById("api-url-input"),
+    syncKeyInput: document.getElementById("sync-key-input"),
+    syncDialogError: document.getElementById("sync-dialog-error"),
+    disconnectSync: document.getElementById("disconnect-sync"),
+    connectSync: document.getElementById("connect-sync"),
     resetButton: document.getElementById("reset-button"),
     resetDialog: document.getElementById("reset-dialog"),
     confirmReset: document.getElementById("confirm-reset"),
@@ -59,10 +75,13 @@
     resultCount: document.getElementById("result-count"),
     taskGroups: document.getElementById("task-groups"),
     emptyState: document.getElementById("empty-state"),
+    noticeCount: document.getElementById("notice-count"),
+    noticeList: document.getElementById("notice-list"),
     toast: document.getElementById("toast")
   };
 
   let toastTimer;
+  let syncQueue = Promise.resolve();
 
   function loadOverrides() {
     try {
@@ -79,6 +98,41 @@
       sourceUpdatedAt: plan.sourceUpdatedAt,
       overrides: state.overrides
     }));
+  }
+
+  function loadSyncConfig() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SYNC_CONFIG_KEY) || "{}");
+      return {
+        apiBaseUrl: typeof saved.apiBaseUrl === "string" ? saved.apiBaseUrl : DEFAULT_API_BASE_URL,
+        token: typeof saved.token === "string" ? saved.token : ""
+      };
+    } catch {
+      return { apiBaseUrl: DEFAULT_API_BASE_URL, token: "" };
+    }
+  }
+
+  function saveSyncConfig() {
+    localStorage.setItem(SYNC_CONFIG_KEY, JSON.stringify(state.syncConfig));
+  }
+
+  function normalizeApiBaseUrl(value) {
+    return value.trim().replace(/\/+$/, "");
+  }
+
+  function isAllowedApiUrl(value) {
+    try {
+      const url = new URL(value);
+      return url.protocol === "https:" || (
+        url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname)
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  function hasCloudSync() {
+    return Boolean(state.syncConfig.apiBaseUrl && state.syncConfig.token);
   }
 
   function isComplete(task) {
@@ -132,6 +186,116 @@
     }, 2400);
   }
 
+  function setSyncState(syncState) {
+    state.syncState = syncState;
+    const meta = {
+      local: { label: "仅本地", icon: "cloud-off", summary: "进度仅保存在当前浏览器" },
+      syncing: { label: "同步中", icon: "cloud-upload", summary: "正在同步云端进度" },
+      synced: { label: "已同步", icon: "cloud-check", summary: "进度已同步到服务器" },
+      error: { label: "同步失败", icon: "cloud-alert", summary: "云端不可用，已保存在本地" }
+    }[syncState];
+    elements.syncButton.classList.toggle("is-synced", syncState === "synced");
+    elements.syncButton.classList.toggle("is-error", syncState === "error");
+    elements.syncButton.innerHTML = `<i data-lucide="${meta.icon}" aria-hidden="true"></i><span>${meta.label}</span>`;
+    elements.syncButton.setAttribute("aria-label", `${meta.label}，打开云端同步设置`);
+    elements.sidebarSyncSummary.textContent = meta.summary;
+    renderIcons();
+  }
+
+  function cleanRemoteOverrides(overrides) {
+    const clean = {};
+    if (!overrides || typeof overrides !== "object") return clean;
+    Object.entries(overrides).forEach(([id, value]) => {
+      if (taskIds.has(id) && typeof value === "boolean") clean[id] = value;
+    });
+    return clean;
+  }
+
+  async function apiRequest(path, options = {}) {
+    if (!hasCloudSync()) throw new Error("云端同步尚未配置");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch(`${state.syncConfig.apiBaseUrl}${path}`, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${state.syncConfig.token}`,
+          ...(options.body ? { "Content-Type": "application/json" } : {}),
+          ...options.headers
+        }
+      });
+      if (!response.ok) {
+        if (response.status === 401) throw new Error("同步密钥不正确");
+        throw new Error(`服务器返回 ${response.status}`);
+      }
+      return response.status === 204 ? null : response.json();
+    } catch (error) {
+      if (error.name === "AbortError") throw new Error("连接服务器超时");
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
+  async function syncFromServer({ interactive = false } = {}) {
+    if (!hasCloudSync()) {
+      setSyncState("local");
+      return;
+    }
+    setSyncState("syncing");
+    try {
+      const remote = await apiRequest("/v1/progress");
+      const cloudOverrides = cleanRemoteOverrides(remote.overrides);
+      const localOverrides = cleanRemoteOverrides(state.overrides);
+      if (remote.revision === 0 && !Object.keys(cloudOverrides).length && Object.keys(localOverrides).length) {
+        await apiRequest("/v1/progress", {
+          method: "PUT",
+          body: JSON.stringify({ overrides: localOverrides })
+        });
+      } else {
+        state.overrides = cloudOverrides;
+        saveOverrides();
+        renderAll();
+      }
+      setSyncState("synced");
+      if (interactive) showToast("云端进度已同步");
+    } catch (error) {
+      setSyncState("error");
+      if (interactive) throw error;
+    }
+  }
+
+  function queueTaskSync(taskId, completed) {
+    if (!hasCloudSync()) return;
+    syncQueue = syncQueue.catch(() => undefined).then(async () => {
+      setSyncState("syncing");
+      try {
+        await apiRequest(`/v1/progress/${encodeURIComponent(taskId)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ completed })
+        });
+        setSyncState("synced");
+      } catch {
+        setSyncState("error");
+      }
+    });
+  }
+
+  async function replaceCloudProgress() {
+    if (!hasCloudSync()) return;
+    setSyncState("syncing");
+    try {
+      await apiRequest("/v1/progress", {
+        method: "PUT",
+        body: JSON.stringify({ overrides: cleanRemoteOverrides(state.overrides) })
+      });
+      setSyncState("synced");
+    } catch {
+      setSyncState("error");
+    }
+  }
+
   function setView(view) {
     state.activeView = view;
     elements.tabs.forEach((tab) => {
@@ -141,6 +305,7 @@
     });
     elements.overviewView.hidden = view !== "overview";
     elements.tasksView.hidden = view !== "tasks";
+    elements.noticesView.hidden = view !== "notices";
   }
 
   function sectionTasks(section) {
@@ -185,10 +350,10 @@
     elements.totalCount.textContent = String(stats.total);
 
     if (stats.percent === 0) {
-      elements.overviewTitle.textContent = "先守住事实边界，再补齐技术链路";
-      elements.overviewSummary.textContent = "从三个项目的真实贡献与数据链路开始，优先处理 P0 任务。";
+      elements.overviewTitle.textContent = "先打通三条项目链路";
+      elements.overviewSummary.textContent = "从架构图、数据流和代码证据开始，优先完成 P0 交付。";
     } else if (stats.percent < 35) {
-      elements.overviewTitle.textContent = "项目边界正在成形，继续推进 P0";
+      elements.overviewTitle.textContent = "项目讲法正在成形，继续推进 P0";
       elements.overviewSummary.textContent = `已完成 ${stats.completed} 项，先让三个项目都能稳定承受三层追问。`;
     } else if (stats.percent < 70) {
       elements.overviewTitle.textContent = "项目讲法已有骨架，开始串联技术原理";
@@ -208,8 +373,7 @@
 
     const priorityMeta = [
       { key: "P0", label: "P0 · 投递前", note: "必须完成并能连续回答" },
-      { key: "P1", label: "P1 · 首面前", note: "补齐工程理解和细节" },
-      { key: "BASE", label: "基础项", note: "规则、边界与验收标准" }
+      { key: "P1", label: "P1 · 首面前", note: "补齐工程理解和细节" }
     ];
 
     elements.priorityLanes.innerHTML = priorityMeta.map((meta) => {
@@ -242,6 +406,16 @@
         <i data-lucide="chevron-right" aria-hidden="true"></i>
       </button>`;
     }).join("");
+  }
+
+  function renderNotices() {
+    const count = plan.notices.reduce((sum, group) => sum + group.items.length, 0);
+    elements.noticeCount.textContent = `${count} 条`;
+    elements.noticeList.innerHTML = plan.notices.map((group) => `
+      <section class="notice-group" aria-labelledby="${group.id}-title">
+        <h3 id="${group.id}-title">${escapeHtml(group.title)}</h3>
+        <ul>${group.items.map((item) => `<li>${inlineMarkup(item)}</li>`).join("")}</ul>
+      </section>`).join("");
   }
 
   function taskMatches(task) {
@@ -306,6 +480,7 @@
     renderNavigation();
     renderOverview();
     renderTaskGroups();
+    renderNotices();
     renderIcons();
   }
 
@@ -378,6 +553,7 @@
     if (checkbox.checked === Boolean(task.completed)) delete state.overrides[task.id];
     else state.overrides[task.id] = checkbox.checked;
     saveOverrides();
+    queueTaskSync(task.id, checkbox.checked);
     renderAll();
   });
 
@@ -416,6 +592,7 @@
       state.overrides = cleanOverrides;
       saveOverrides();
       renderAll();
+      await replaceCloudProgress();
       showToast(`已导入 ${Object.keys(cleanOverrides).length} 条进度记录`);
     } catch {
       showToast("导入失败：文件格式不正确");
@@ -425,11 +602,52 @@
   });
 
   elements.resetButton.addEventListener("click", () => elements.resetDialog.showModal());
-  elements.confirmReset.addEventListener("click", () => {
+  elements.confirmReset.addEventListener("click", async () => {
     state.overrides = {};
     localStorage.removeItem(STORAGE_KEY);
     renderAll();
+    await replaceCloudProgress();
     showToast("已恢复源码默认进度");
+  });
+
+  elements.syncButton.addEventListener("click", () => {
+    elements.apiUrlInput.value = state.syncConfig.apiBaseUrl || DEFAULT_API_BASE_URL;
+    elements.syncKeyInput.value = state.syncConfig.token;
+    elements.syncDialogError.hidden = true;
+    elements.disconnectSync.hidden = !hasCloudSync();
+    elements.syncDialog.showModal();
+  });
+
+  elements.syncForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const apiBaseUrl = normalizeApiBaseUrl(elements.apiUrlInput.value);
+    const token = elements.syncKeyInput.value.trim();
+    if (!isAllowedApiUrl(apiBaseUrl) || !token) {
+      elements.syncDialogError.textContent = "请输入 HTTPS API 地址和同步密钥。";
+      elements.syncDialogError.hidden = false;
+      return;
+    }
+
+    elements.connectSync.disabled = true;
+    state.syncConfig = { apiBaseUrl, token };
+    saveSyncConfig();
+    try {
+      await syncFromServer({ interactive: true });
+      elements.syncDialog.close();
+    } catch (error) {
+      elements.syncDialogError.textContent = error.message || "无法连接云端服务。";
+      elements.syncDialogError.hidden = false;
+    } finally {
+      elements.connectSync.disabled = false;
+    }
+  });
+
+  elements.disconnectSync.addEventListener("click", () => {
+    state.syncConfig = { apiBaseUrl: DEFAULT_API_BASE_URL, token: "" };
+    localStorage.removeItem(SYNC_CONFIG_KEY);
+    setSyncState("local");
+    elements.syncDialog.close();
+    showToast("已断开云端，本地进度保留");
   });
 
   document.addEventListener("click", (event) => {
@@ -441,4 +659,6 @@
 
   renderAll();
   setView("overview");
+  setSyncState(hasCloudSync() ? "syncing" : "local");
+  syncFromServer();
 })();

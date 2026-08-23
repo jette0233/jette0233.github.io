@@ -367,6 +367,38 @@ summary:focus-visible {
   gap: 6px;
 }
 
+.sync-button {
+  display: inline-flex;
+  min-width: 92px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.sync-button:hover {
+  color: var(--text);
+  background: var(--surface-muted);
+}
+
+.sync-button.is-synced {
+  color: var(--accent-strong);
+}
+
+.sync-button.is-error {
+  color: var(--danger);
+}
+
+.sync-button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .icon-button {
   display: inline-grid;
   width: 40px;
@@ -545,7 +577,7 @@ summary:focus-visible {
 
 .priority-lanes {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   background: var(--line);
@@ -888,6 +920,44 @@ summary:focus-visible {
   margin: 10px 0 0;
 }
 
+.notice-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 34px;
+}
+
+.notice-group {
+  padding: 0 0 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.notice-group h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.notice-group ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+.notice-group li::marker {
+  color: var(--accent);
+}
+
+.notice-group code {
+  padding: 1px 4px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border-radius: 3px;
+  font-family: Consolas, "SFMono-Regular", monospace;
+  font-size: 13px;
+}
+
 .toast {
   position: fixed;
   right: 22px;
@@ -934,6 +1004,11 @@ dialog form {
   height: 20px;
 }
 
+.sync-dialog-icon {
+  color: var(--accent-strong);
+  background: var(--accent-soft);
+}
+
 dialog h2 {
   margin: 14px 0 4px;
   font-size: 19px;
@@ -942,6 +1017,33 @@ dialog h2 {
 dialog p {
   margin: 0;
   color: var(--muted);
+}
+
+.dialog-field {
+  display: grid;
+  gap: 5px;
+  margin-top: 16px;
+}
+
+.dialog-field span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dialog-field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.dialog-error {
+  margin-top: 10px;
+  color: var(--danger);
+  font-size: 12px;
 }
 
 .dialog-actions {
@@ -968,6 +1070,21 @@ dialog p {
   color: #fff;
   background: var(--danger);
   border-color: var(--danger);
+}
+
+.text-button.primary-action {
+  color: #fff;
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.danger-text-button {
+  color: var(--danger);
+}
+
+.split-actions {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
 }
 
 [data-tooltip] {
@@ -1030,6 +1147,10 @@ dialog p {
   .priority-lanes {
     grid-template-columns: 1fr;
   }
+
+  .notice-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1074,6 +1195,15 @@ dialog p {
   }
 
   .toolbar-actions [data-tooltip]::after {
+    display: none;
+  }
+
+  .sync-button {
+    min-width: 40px;
+    padding: 0 9px;
+  }
+
+  .sync-button span {
     display: none;
   }
 

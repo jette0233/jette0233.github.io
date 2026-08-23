@@ -10,8 +10,10 @@ const lines = readFileSync(sourcePath, "utf8").replace(/\r\n/g, "\n").split("\n"
 let title = "学习进度";
 let currentSection = null;
 let currentGroup = null;
+let currentNoticeGroup = null;
 const sections = [];
 const recommendedOrder = [];
+const notices = [];
 
 function stableId(prefix, value) {
   let hash = 0x811c9dc5;
@@ -63,12 +65,23 @@ for (const line of lines) {
     };
     sections.push(currentSection);
     currentGroup = null;
+    currentNoticeGroup = null;
     continue;
   }
 
   const h3 = line.match(/^###\s+(.+)$/);
   if (h3 && currentSection) {
     const rawTitle = h3[1].trim();
+    if (currentSection.title === "公告") {
+      currentNoticeGroup = {
+        id: stableId("notice", rawTitle),
+        title: rawTitle,
+        items: []
+      };
+      notices.push(currentNoticeGroup);
+      currentGroup = null;
+      continue;
+    }
     currentGroup = {
       id: stableId("group", `${currentSection.rawTitle}/${rawTitle}`),
       title: stripHeadingNumber(rawTitle).replace(/\s*[（(]P[012](?:\s*\/\s*P[012])?[）)]\s*$/i, ""),
@@ -76,6 +89,12 @@ for (const line of lines) {
       tasks: []
     };
     currentSection.groups.push(currentGroup);
+    continue;
+  }
+
+  const noticeMatch = line.match(/^-\s+(?!\[)(.+)$/);
+  if (noticeMatch && currentSection?.title === "公告" && currentNoticeGroup) {
+    currentNoticeGroup.items.push(noticeMatch[1].trim());
     continue;
   }
 
@@ -121,6 +140,7 @@ const plan = {
   sourceUpdatedAt: statSync(sourcePath).mtime.toISOString(),
   taskCount,
   recommendedOrder,
+  notices,
   sections: populatedSections
 };
 

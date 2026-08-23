@@ -21,4 +21,8 @@ if (tasks.some((task) => !["P0", "P1", "P2", "BASE"].includes(task.priority))) {
   throw new Error("Unknown task priority detected.");
 }
 
-console.log(`Validated ${tasks.length} unique tasks across ${plan.sections.length} sections.`);
+if (!Array.isArray(plan.notices) || plan.notices.some((group) => !group.items.length)) {
+  throw new Error("Announcement groups are missing or empty.");
+}
+
+console.log(`Validated ${tasks.length} unique tasks and ${plan.notices.length} announcement groups.`);

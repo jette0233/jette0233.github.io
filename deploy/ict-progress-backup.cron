@@ -1,0 +1,1 @@
+25 2 * * * root /opt/ict-progress/backup-progress.sh >> /var/log/ict-progress-backup.log 2>&1

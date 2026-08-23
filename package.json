@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-plan.mjs",
-    "check": "node scripts/check-plan.mjs"
+    "check": "node scripts/check-plan.mjs",
+    "site": "npm run check && node scripts/build-site.mjs"
   },
   "engines": {
     "node": ">=20"

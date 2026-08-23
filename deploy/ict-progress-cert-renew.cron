@@ -1,0 +1,1 @@
+17 */4 * * * root /opt/ict-progress/deploy/renew-ip-certificate.sh >> /var/log/ict-progress-cert-renew.log 2>&1
