@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="计算所实习传统全栈复盘学习进度看板">
+  <meta name="theme-color" content="#f4f6f5">
+  <title>计算所实习复盘 | 学习进度</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="复盘章节">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">ICT</div>
+        <div>
+          <strong>实习复盘</strong>
+          <span>传统全栈路线</span>
+        </div>
+      </div>
+
+      <nav class="section-nav" id="section-nav" aria-label="章节筛选"></nav>
+
+      <div class="sidebar-footer">
+        <span id="sidebar-progress">0 / 0</span>
+        <div class="mini-progress" role="progressbar" aria-label="总学习进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="sidebar-progress-bar"></span>
+        </div>
+        <small>进度保存在当前浏览器</small>
+      </div>
+    </aside>
+
+    <main class="main-column" id="main-content">
+      <header class="topbar">
+        <button class="icon-button mobile-menu-button" id="menu-button" type="button" aria-label="打开章节导航" aria-expanded="false" aria-controls="sidebar">
+          <i data-lucide="menu" aria-hidden="true"></i>
+        </button>
+
+        <div class="page-heading">
+          <h1>计算所实习复盘</h1>
+          <p>传统全栈学习进度</p>
+        </div>
+
+        <div class="view-tabs" role="tablist" aria-label="视图">
+          <button id="overview-tab" class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="overview-view" data-view="overview">
+            <i data-lucide="chart-no-axes-column-increasing" aria-hidden="true"></i>
+            总览
+          </button>
+          <button id="tasks-tab" class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="tasks-view" data-view="tasks">
+            <i data-lucide="list-checks" aria-hidden="true"></i>
+            清单
+          </button>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="清单工具">
+        <label class="search-field" for="search-input">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <span class="sr-only">搜索任务</span>
+          <input id="search-input" type="search" placeholder="搜索任务或知识点" autocomplete="off">
+        </label>
+
+        <label class="select-field" for="priority-filter">
+          <span>优先级</span>
+          <select id="priority-filter">
+            <option value="all">全部</option>
+            <option value="P0">P0</option>
+            <option value="P1">P1</option>
+            <option value="P2">P2</option>
+            <option value="BASE">基础项</option>
+          </select>
+        </label>
+
+        <label class="select-field" for="status-filter">
+          <span>状态</span>
+          <select id="status-filter">
+            <option value="all">全部</option>
+            <option value="todo">未完成</option>
+            <option value="done">已完成</option>
+          </select>
+        </label>
+
+        <div class="toolbar-actions">
+          <button class="icon-button" id="export-button" type="button" aria-label="导出进度" data-tooltip="导出进度">
+            <i data-lucide="download" aria-hidden="true"></i>
+          </button>
+          <button class="icon-button" id="import-button" type="button" aria-label="导入进度" data-tooltip="导入进度">
+            <i data-lucide="upload" aria-hidden="true"></i>
+          </button>
+          <input id="import-input" type="file" accept="application/json,.json" hidden>
+          <button class="icon-button danger-button" id="reset-button" type="button" aria-label="重置本地进度" data-tooltip="重置本地进度">
+            <i data-lucide="rotate-ccw" aria-hidden="true"></i>
+          </button>
+        </div>
+      </section>
+
+      <section class="view-panel" id="overview-view" role="tabpanel" aria-labelledby="overview-tab">
+        <div class="overview-lead">
+          <div class="progress-ring-wrap">
+            <svg class="progress-ring" viewBox="0 0 132 132" role="img" aria-labelledby="ring-title ring-desc">
+              <title id="ring-title">总学习进度</title>
+              <desc id="ring-desc">已完成百分比</desc>
+              <circle class="ring-track" cx="66" cy="66" r="54"></circle>
+              <circle class="ring-value" id="ring-value" cx="66" cy="66" r="54"></circle>
+            </svg>
+            <div class="ring-label" aria-hidden="true">
+              <strong id="overall-percent">0%</strong>
+              <span>总进度</span>
+            </div>
+          </div>
+
+          <div class="overview-copy">
+            <p class="eyebrow">当前基线</p>
+            <h2 id="overview-title">先守住事实边界，再补齐技术链路</h2>
+            <p id="overview-summary">正在载入学习清单。</p>
+            <div class="metric-row" aria-label="学习统计">
+              <div>
+                <span>已完成</span>
+                <strong id="completed-count">0</strong>
+              </div>
+              <div>
+                <span>待完成</span>
+                <strong id="remaining-count">0</strong>
+              </div>
+              <div>
+                <span>总任务</span>
+                <strong id="total-count">0</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section class="priority-section" aria-labelledby="priority-heading">
+          <div class="section-heading-row">
+            <div>
+              <p class="eyebrow">投递节奏</p>
+              <h2 id="priority-heading">按优先级推进</h2>
+            </div>
+            <span class="source-updated" id="source-updated"></span>
+          </div>
+          <div class="priority-lanes" id="priority-lanes"></div>
+        </section>
+
+        <section class="sequence-section" aria-labelledby="sequence-heading">
+          <div class="section-heading-row">
+            <div>
+              <p class="eyebrow">推进路线</p>
+              <h2 id="sequence-heading">建议学习顺序</h2>
+            </div>
+          </div>
+          <ol class="learning-sequence" id="learning-sequence"></ol>
+        </section>
+
+        <section class="category-section" aria-labelledby="category-heading">
+          <div class="section-heading-row">
+            <div>
+              <p class="eyebrow">知识版图</p>
+              <h2 id="category-heading">章节完成度</h2>
+            </div>
+          </div>
+          <div class="category-progress-list" id="category-progress-list"></div>
+        </section>
+      </section>
+
+      <section class="view-panel" id="tasks-view" role="tabpanel" aria-labelledby="tasks-tab" hidden>
+        <div class="task-view-heading">
+          <div>
+            <p class="eyebrow">任务清单</p>
+            <h2 id="task-view-title">全部章节</h2>
+          </div>
+          <span id="result-count" aria-live="polite">0 项</span>
+        </div>
+        <div class="empty-state" id="empty-state" hidden>
+          <i data-lucide="search-x" aria-hidden="true"></i>
+          <p>没有符合当前条件的任务</p>
+        </div>
+        <div class="task-groups" id="task-groups"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <dialog id="reset-dialog">
+    <form method="dialog">
+      <div class="dialog-icon" aria-hidden="true"><i data-lucide="triangle-alert"></i></div>
+      <h2>重置本地进度？</h2>
+      <p>所有浏览器内的勾选记录将恢复为源码中的默认状态。</p>
+      <div class="dialog-actions">
+        <button class="text-button" value="cancel">取消</button>
+        <button class="text-button destructive" id="confirm-reset" value="confirm">确认重置</button>
+      </div>
+    </form>
+  </dialog>
+
+  <noscript>此页面需要 JavaScript 才能显示和保存学习进度。</noscript>
+  <script src="assets/lucide.min.js"></script>
+  <script src="data/study-plan.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
